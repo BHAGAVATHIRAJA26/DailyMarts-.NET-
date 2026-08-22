@@ -1,11 +1,13 @@
 const Order = require('../models/Order');
 const Bill = require('../models/Bill');
 const Delivery = require('../models/Delivery');
+const DailyInventory = require('../models/DailyInventory');
 const Subscription = require('../models/Subscription');
 const { successResponse, errorResponse } = require('../utils/responseHandler');
 
-// @desc    Get aggregated sales statistics for farmer (Real MongoDB calculations only)
+// @desc    Get aggregated sales statistics for farmer
 // @route   GET /api/reports/farmer/stats
+// @route   GET /api/reports
 // @access  Private (Farmer)
 const getFarmerStats = async (req, res) => {
   try {
@@ -13,16 +15,11 @@ const getFarmerStats = async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
 
     // 1. Today's sales & revenue
-    const todayOrders = await Order.find({
-      farmer: farmerId,
-      deliveryDate: today,
-      orderStatus: { $ne: 'CANCELLED' },
-    });
-
+    const todayOrders = await Order.find({ farmer: farmerId, deliveryDate: today, orderStatus: { $ne: 'CANCELLED' } });
     const todaySalesCount = todayOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
     const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-    // 2. All-time revenue aggregation from farmer bills
+    // 2. All-time revenue aggregation
     const allBills = await Bill.find({ farmer: farmerId });
     const monthlyRevenue = allBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
     const pendingPayments = allBills.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
@@ -39,7 +36,6 @@ const getFarmerStats = async (req, res) => {
       pendingPayments: pendingPayments,
       totalPaid: totalPaid,
       activeCustomers: activeCustomersCount,
-      walletBalance: req.user.walletBalance || 0,
     });
   } catch (error) {
     console.error('getFarmerStats Error:', error.message);
