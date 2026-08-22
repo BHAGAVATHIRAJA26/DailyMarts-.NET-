@@ -29,6 +29,16 @@ app.use(
   })
 );
 
+// Root health check endpoint (for Render / uptime pings)
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: '🌿 DailyMarts REST API Server Active',
+    apiHealth: '/api/health',
+    timestamp: new Date(),
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
