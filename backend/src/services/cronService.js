@@ -4,6 +4,16 @@ const Delivery = require('../models/Delivery');
 const Bill = require('../models/Bill');
 const Cancellation = require('../models/Cancellation');
 
+const generateInvoiceId = () => {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.floor(100 + Math.random() * 900);
+  const year = new Date().getFullYear();
+  return {
+    invoiceNo: `INV-DM-${year}-${ts}-${rand}`,
+    billId: `BILL-${year}-${ts}-${rand}`,
+  };
+};
+
 const initScheduledJobs = () => {
   // 1. Daily midnight job: Generate daily delivery records for active subscriptions
   cron.schedule('0 0 * * *', async () => {
@@ -23,7 +33,7 @@ const initScheduledJobs = () => {
         });
 
         if (cancellation) {
-          console.log(`Skipping delivery for Subscription ${sub.subscriptionId} today (Cancelled by customer).`);
+          console.log(`Skipping delivery for Subscription ${sub.subscriptionId} today (Cancelled/Skipped by customer).`);
           continue;
         }
 
@@ -78,12 +88,11 @@ const initScheduledJobs = () => {
           status: 'DELIVERED',
         });
 
-        const totalDeliveredQuantity = deliveries.reduce((sum, d) => sum + d.deliveredQuantity, 0);
+        const totalDeliveredQuantity = deliveries.reduce((sum, d) => sum + (d.deliveredQuantity || 0), 0);
         const subtotal = totalDeliveredQuantity * sub.pricePerUnit;
 
         if (subtotal > 0) {
-          const invoiceNo = `INV-DM-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const billId = `BILL-${now.getFullYear()}-${Date.now().toString().slice(-6)}`;
+          const { invoiceNo, billId } = generateInvoiceId();
 
           await Bill.create({
             billId,
@@ -94,7 +103,7 @@ const initScheduledJobs = () => {
             billingPeriod: billingPeriodStr,
             startDate: startDateStr,
             endDate: endDateStr,
-            productName: sub.product.name,
+            productName: sub.product?.name || 'Milk Subscription',
             totalDeliveredQuantity,
             unit: sub.unit,
             pricePerUnit: sub.pricePerUnit,

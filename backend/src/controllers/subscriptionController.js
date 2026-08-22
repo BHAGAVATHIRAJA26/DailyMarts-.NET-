@@ -67,22 +67,32 @@ const createSubscription = async (req, res) => {
       status: 'ACTIVE',
     });
 
-    // Generate first delivery record for today
+    // Safely upsert initial delivery record (ignore E11000 duplicate index conflicts)
     const today = new Date().toISOString().slice(0, 10);
-    await Delivery.create({
-      subscription: subscription._id,
-      customer: req.user._id,
-      farmer: product.farmer._id,
-      product: product._id,
-      date: today,
-      deliverySlot: slot,
-      requestedQuantity: qty,
-      deliveredQuantity: qty,
-      unit: product.unit,
-      pricePerUnit: product.price,
-      totalCost: qty * product.price,
-      status: 'PENDING',
-    });
+    try {
+      await Delivery.updateOne(
+        { subscription: subscription._id, date: today },
+        {
+          $setOnInsert: {
+            subscription: subscription._id,
+            customer: req.user._id,
+            farmer: product.farmer._id,
+            product: product._id,
+            date: today,
+            deliverySlot: slot,
+            requestedQuantity: qty,
+            deliveredQuantity: qty,
+            unit: product.unit,
+            pricePerUnit: product.price,
+            totalCost: qty * product.price,
+            status: 'PENDING',
+          },
+        },
+        { upsert: true }
+      );
+    } catch (deliveryErr) {
+      console.warn('Initial delivery upsert skipped:', deliveryErr.message);
+    }
 
     // Notify Farmer
     await Notification.create({
@@ -107,7 +117,6 @@ const createSubscription = async (req, res) => {
 // @access  Private
 const getSubscriptions = async (req, res) => {
   try {
-    // STRICT user scoping — never leak other users' subscriptions
     const filter =
       req.user.role === 'FARMER'
         ? { farmer: req.user._id }
@@ -123,7 +132,6 @@ const getSubscriptions = async (req, res) => {
       .populate('customer', 'name phone address city')
       .sort({ createdAt: -1 });
 
-    // Always return array — new users with no subscriptions get []
     return successResponse(res, 200, `Found ${subscriptions.length} subscriptions`, subscriptions);
   } catch (error) {
     console.error('getSubscriptions Error:', error.message);
@@ -136,8 +144,14 @@ const getSubscriptions = async (req, res) => {
 // @access  Private
 const pauseSubscription = async (req, res) => {
   try {
+    const { id } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+
     const subscription = await Subscription.findOne({
-      $or: [{ _id: req.params.id }, { subscriptionId: req.params.id }],
+      $or: [
+        ...(isObjectId ? [{ _id: id }] : []),
+        { subscriptionId: id },
+      ],
     });
 
     if (!subscription) {
@@ -167,8 +181,14 @@ const pauseSubscription = async (req, res) => {
 // @access  Private
 const cancelSubscription = async (req, res) => {
   try {
+    const { id } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+
     const subscription = await Subscription.findOne({
-      $or: [{ _id: req.params.id }, { subscriptionId: req.params.id }],
+      $or: [
+        ...(isObjectId ? [{ _id: id }] : []),
+        { subscriptionId: id },
+      ],
     });
 
     if (!subscription) {

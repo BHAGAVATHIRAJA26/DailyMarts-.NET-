@@ -17,6 +17,7 @@ const notificationSchema = new mongoose.Schema(
       enum: [
         'ORDER_CREATED',
         'ORDER_ACCEPTED',
+        'ORDER_UPDATED',
         'ORDER_CANCELLED',
         'PAYMENT_PENDING',
         'PAYMENT_RECEIVED',
@@ -26,6 +27,7 @@ const notificationSchema = new mongoose.Schema(
         'EXCHANGE_ACCEPTED',
         'EXCHANGE_REJECTED',
         'DELIVERY_DISPATCHED',
+        'ANNOUNCEMENT',
       ],
       required: true,
     },
