@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CustomerLayout from '../../layouts/CustomerLayout';
+import { productService, subscriptionService } from '../../services';
 import { mockFarmers, mockProducts } from '../../utils/mockData';
 import { formatCurrency, calcBillEstimate } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
@@ -11,6 +12,7 @@ export default function MilkRequestPage() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
+  const [products, setProducts] = useState([]);
   const [selectedFarmer, setSelectedFarmer] = useState(mockFarmers[0].id);
   const [selectedProduct, setSelectedProduct] = useState('DM-MILK-001');
   const [frequency, setFrequency] = useState('daily');
@@ -24,17 +26,51 @@ export default function MilkRequestPage() {
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
 
-  const farmer = mockFarmers.find((f) => f.id === selectedFarmer) || mockFarmers[0];
-  const product = mockProducts.find((p) => p.id === selectedProduct) || mockProducts[0];
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-  const estimatedBill = calcBillEstimate(product.price, capacity, frequency, duration);
+  const fetchProducts = async () => {
+    try {
+      const res = await productService.getAll();
+      if (res.data?.data?.length > 0) {
+        setProducts(res.data.data);
+        setSelectedProduct(res.data.data[0]._id || res.data.data[0].productId);
+      } else {
+        setProducts(mockProducts);
+      }
+    } catch (err) {
+      setProducts(mockProducts);
+    }
+  };
+
+  const productList = products.length > 0 ? products : mockProducts;
+  const farmer = mockFarmers.find((f) => f.id === selectedFarmer) || mockFarmers[0];
+  const product = productList.find((p) => p._id === selectedProduct || p.productId === selectedProduct || p.id === selectedProduct) || productList[0];
+
+  const estimatedBill = calcBillEstimate(product.price || 60, capacity, frequency, duration);
 
   const handleConfirm = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success('🥛 Daily Milk Subscription Confirmed!', `Your recurring request for ${product.name} has been placed with ${farmer.name}.`);
-    setLoading(false);
-    navigate('/customer/subscriptions');
+    try {
+      setLoading(true);
+      await subscriptionService.create({
+        productId: product._id || product.productId || product.id,
+        farmerId: selectedFarmer.length === 24 ? selectedFarmer : undefined,
+        quantity: capacity,
+        frequency: frequency.toUpperCase(),
+        deliverySlot: deliveryTime.toUpperCase(),
+        startDate,
+        durationDays: duration,
+      });
+
+      toast.success('🥛 Daily Milk Subscription Confirmed!', `Your recurring request for ${product.name} has been placed.`);
+      navigate('/customer/subscriptions');
+    } catch (err) {
+      console.error('Subscription error:', err);
+      toast.error('Subscription Failed', err.response?.data?.message || err.message || 'Could not place subscription');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -110,23 +146,22 @@ export default function MilkRequestPage() {
                 <p className="text-xs text-muted mb-4">Chilled to 4°C immediately after morning milking. Zero additives or processing.</p>
 
                 <div className="milk-type-grid">
-                  {mockProducts.filter((p) => p.category === 'milk').map((p) => (
+                  {productList.filter((p) => (p.category || '').toLowerCase().includes('milk')).map((p) => (
                     <div
-                      key={p.id}
-                      className={`milk-type-card ${selectedProduct === p.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedProduct(p.id)}
+                      key={p._id || p.productId || p.id}
+                      className={`milk-type-card ${selectedProduct === (p._id || p.productId || p.id) ? 'selected' : ''}`}
+                      onClick={() => setSelectedProduct(p._id || p.productId || p.id)}
                     >
                       <div className="milk-card-top flex justify-between w-full">
-                        <span className="text-4xl">{p.emoji}</span>
+                        <span className="text-4xl">{p.emoji || '🥛'}</span>
                         {p.isA2 && <span className="badge a2-badge">✨ A2 Pure</span>}
                       </div>
                       <div className="font-bold text-base mt-2 text-primary">{p.name}</div>
-                      <div className="text-xs text-muted mb-2">ID: {p.id}</div>
-                      <div className="text-xl font-extrabold text-green">{formatCurrency(p.price)} / {p.unit}</div>
+                      <div className="text-xs text-muted mb-2">ID: #{p.productId || p.id}</div>
+                      <div className="text-xl font-extrabold text-green">{formatCurrency(p.price)} / {p.unit || 'L'}</div>
 
                       <div className="milk-specs-box mt-3 w-full bg-cream p-2 rounded text-xs text-left">
-                        <div>🧪 <strong>{p.fatContent}</strong> • <strong>{p.snfContent}</strong></div>
-                        <div className="text-muted mt-1">🕒 {p.milkingSlot}</div>
+                        <div>🧪 <strong>{p.fatContent || '4.5% Fat'}</strong></div>
                       </div>
                     </div>
                   ))}
@@ -235,8 +270,7 @@ export default function MilkRequestPage() {
                 <h2 className="text-lg font-bold text-primary mb-4">Step 4: Review Milk Subscription & Monthly Invoice</h2>
                 <div className="summary-box">
                   <div className="summary-row"><span>Dairy Farmer:</span><strong>{farmer.name} ({farmer.farm})</strong></div>
-                  <div className="summary-row"><span>Farm Location:</span><strong>{farmer.location} ({farmer.distance})</strong></div>
-                  <div className="summary-row"><span>Milk Type:</span><strong>{product.name} ({product.fatContent})</strong></div>
+                  <div className="summary-row"><span>Milk Type:</span><strong>{product.name}</strong></div>
                   <div className="summary-row"><span>Price per Liter:</span><strong>{formatCurrency(product.price)} / L</strong></div>
                   <div className="summary-row"><span>Daily Quantity:</span><strong>{capacity} Liters</strong></div>
                   <div className="summary-row"><span>Delivery Slot:</span><strong className="capitalize">{deliveryTime} Slot (Before 7:30 AM)</strong></div>

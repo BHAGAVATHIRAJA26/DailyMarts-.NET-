@@ -1,53 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FarmerLayout from '../../layouts/FarmerLayout';
 import { useAuth } from '../../context/AuthContext';
-import { mockFarmerStats, mockFarmerOrders, mockFarmerProducts, mockExchangeRequests } from '../../utils/mockData';
+import { productService, orderService, paymentService } from '../../services';
 import { formatCurrency, getStatusBadgeClass, formatStatus } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import './FarmerDashboard.css';
 
-const salesChartData = [
-  { day: 'Mon', revenue: 6200, liters: 98 },
-  { day: 'Tue', revenue: 5800, liters: 92 },
-  { day: 'Wed', revenue: 6600, liters: 104 },
-  { day: 'Thu', revenue: 7100, liters: 112 },
-  { day: 'Fri', revenue: 6900, liters: 108 },
-  { day: 'Sat', revenue: 8200, liters: 130 },
-  { day: 'Sun', revenue: 7800, liters: 124 },
-];
-
 export default function FarmerDashboard() {
   const { user } = useAuth();
   const toast = useToast();
 
-  // Dairy Operational State
   const [milkingStatus, setMilkingStatus] = useState('Morning Milking Chilled to 4°C');
-  const [products, setProducts] = useState(mockFarmerProducts);
-  const [orders, setOrders] = useState(mockFarmerOrders);
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [bills, setBills] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Quick capacity update right from dashboard
-  const handleQuickCapacityChange = (id, delta) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const newTotal = Math.max(p.soldCapacity, p.totalCapacity + delta);
-          return { ...p, totalCapacity: newTotal };
-        }
-        return p;
-      })
-    );
-    toast.info('Yield Updated', 'Daily milk & dairy capacity updated.');
+  useEffect(() => {
+    fetchFarmerDashboardData();
+  }, [user]);
+
+  const fetchFarmerDashboardData = async () => {
+    try {
+      setLoading(true);
+      const farmerId = user?._id;
+      const [prodRes, orderRes, billRes] = await Promise.allSettled([
+        productService.getAll(farmerId ? { farmerId } : {}),
+        orderService.getAll(),
+        paymentService.getBills(),
+      ]);
+
+      if (prodRes.status === 'fulfilled') {
+        setProducts(prodRes.value.data?.data || []);
+      }
+      if (orderRes.status === 'fulfilled') {
+        setOrders(orderRes.value.data?.data || []);
+      }
+      if (billRes.status === 'fulfilled') {
+        setBills(billRes.value.data?.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load farmer dashboard data:', err);
+      setProducts([]);
+      setOrders([]);
+      setBills([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Quick order mark supplied
-  const handleMarkSupplied = (orderId) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, orderStatus: 'supplied' } : o))
-    );
-    toast.success('Milk Delivered', `Order #${orderId} marked as delivered to customer.`);
+  const handleMarkSupplied = async (orderId) => {
+    try {
+      await orderService.markSupplied(orderId);
+      toast.success('Milk Delivered', `Order #${orderId} marked as delivered to customer.`);
+      fetchFarmerDashboardData();
+    } catch (err) {
+      toast.error('Action Failed', err.response?.data?.message || err.message);
+    }
   };
+
+  const todaySalesLiters = orders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+  const todayRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalPendingBills = bills.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
+
+  const chartData = [
+    { day: 'Today', revenue: todayRevenue, liters: todaySalesLiters },
+  ];
 
   return (
     <FarmerLayout>
@@ -58,10 +78,10 @@ export default function FarmerDashboard() {
           <div className="farmer-op-banner-main">
             <div className="farmer-badge-tag">🥛 FARMER DAIRY & MILK OPERATIONS</div>
             <h1 className="farmer-op-title">
-              {user?.farmName || 'Ravi Dairy Farm'} Operations
+              {user?.farmName || `${user?.name || 'Farmer'}'s Dairy Farm`}
             </h1>
             <p className="farmer-op-subtitle">
-              Owner: <strong>{user?.name || 'Ravi Kumar'}</strong> · 🐄 28 Dairy Cows · 📍 {user?.location || 'Dindigul Region'}
+              Owner: <strong>{user?.name || 'Farmer'}</strong> · 📍 {user?.city || user?.location || 'Dindigul Region'}
             </p>
           </div>
 
@@ -89,7 +109,7 @@ export default function FarmerDashboard() {
             <span className="text-3xl">🧪</span>
             <div>
               <div className="font-bold text-sm text-primary">Today's Dairy Milk Quality Test</div>
-              <div className="text-xs text-muted">Tested at 5:00 AM • Fat: <strong>4.8%</strong> • SNF: <strong>9.0%</strong> • Temp: <strong>4.0°C</strong></div>
+              <div className="text-xs text-muted font-medium">Tested at 5:00 AM • Fat: <strong>4.8%</strong> • Temp: <strong>4.0°C</strong></div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -98,7 +118,7 @@ export default function FarmerDashboard() {
           </div>
         </div>
 
-        <div className="farmer-dashboard-grid">
+        <div className="farmer-dashboard-grid mt-6">
           
           {/* Main Operations Left Column */}
           <div className="farmer-main-col">
@@ -108,179 +128,124 @@ export default function FarmerDashboard() {
               <div className="farmer-metric-card hover-lift">
                 <div className="metric-header">
                   <span className="metric-icon">🥛</span>
-                  <span className="metric-trend green">140 L</span>
                 </div>
-                <div className="metric-value">{mockFarmerStats.todaySales} L</div>
+                <div className="metric-value">{todaySalesLiters} L</div>
                 <div className="metric-label">Today's Milk Yield Dispatched</div>
-                <div className="metric-footer">42 Daily Household Subscriptions</div>
+                <div className="metric-footer">{orders.length} Active Orders</div>
               </div>
 
               <div className="farmer-metric-card hover-lift">
                 <div className="metric-header">
                   <span className="metric-icon">💰</span>
-                  <span className="metric-trend green">+12%</span>
                 </div>
-                <div className="metric-value">{formatCurrency(mockFarmerStats.todayRevenue)}</div>
-                <div className="metric-label">Today's Milk Revenue</div>
-                <div className="metric-footer">85% collected via UPI</div>
-              </div>
-
-              <div className="farmer-metric-card hover-lift">
-                <div className="metric-header">
-                  <span className="metric-icon">📈</span>
-                  <span className="metric-trend amber">Aug 2026</span>
-                </div>
-                <div className="metric-value">{formatCurrency(mockFarmerStats.monthlyRevenue)}</div>
-                <div className="metric-label">Monthly Gross Revenue</div>
-                <div className="metric-footer">3,420 Liters total milk sold</div>
+                <div className="metric-value">{formatCurrency(todayRevenue)}</div>
+                <div className="metric-label">Today's Revenue</div>
+                <div className="metric-footer">Live from MongoDB</div>
               </div>
 
               <div className="farmer-metric-card alert hover-lift">
                 <div className="metric-header">
                   <span className="metric-icon">⚠️</span>
-                  <span className="metric-trend red">Due</span>
                 </div>
-                <div className="metric-value">{formatCurrency(mockFarmerStats.pendingPayments)}</div>
+                <div className="metric-value">{formatCurrency(totalPendingBills)}</div>
                 <div className="metric-label">Pending Customer Milk Bills</div>
                 <Link to="/farmer/billing" className="metric-link">Send Payment Reminders →</Link>
               </div>
             </div>
 
-            {/* Interactive Capacity & Yield Control Center */}
-            <div className="card farmer-section-card">
+            {/* Listed Products */}
+            <div className="card farmer-section-card mt-6">
               <div className="card-header flex justify-between items-center">
                 <div>
-                  <h2 className="text-lg font-bold text-primary">🥛 Daily Milk & Dairy Yield Capacity Control</h2>
-                  <p className="text-xs text-muted">Adjust total available liters and dairy products as morning & evening milking yield changes</p>
+                  <h2 className="text-lg font-bold text-primary">🥛 Your Listed Products</h2>
+                  <p className="text-xs text-muted">Daily products available in customer store catalog</p>
                 </div>
-                <Link to="/farmer/capacity" className="btn btn-secondary btn-sm">Full Capacity Page →</Link>
+                <Link to="/farmer/products" className="btn btn-primary btn-sm">+ Manage Catalog</Link>
               </div>
 
               <div className="card-body">
-                <div className="capacity-control-list">
-                  {products.map((p) => {
-                    const remaining = p.totalCapacity - p.soldCapacity;
-                    const soldPct = Math.round((p.soldCapacity / p.totalCapacity) * 100);
-
-                    return (
-                      <div key={p.id} className="capacity-item-row">
-                        <div className="capacity-item-info">
-                          <span className="text-2xl">{p.emoji}</span>
+                {products.length === 0 ? (
+                  <div className="text-center p-6 text-muted">
+                    <p className="mb-2 font-bold text-sm">No products listed yet.</p>
+                    <Link to="/farmer/products" className="btn btn-primary btn-sm">+ Add Your First Product</Link>
+                  </div>
+                ) : (
+                  <div className="capacity-control-list">
+                    {products.map((p) => (
+                      <div key={p._id || p.productId} className="capacity-item-row flex items-center justify-between p-3 border-b border-light">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{p.emoji || '🥛'}</span>
                           <div>
                             <div className="font-bold text-base">{p.name}</div>
-                            <div className="text-xs text-muted">Price: {formatCurrency(p.price)}/{p.unit}</div>
+                            <div className="text-xs text-muted">Price: {formatCurrency(p.price)}/{p.unit || 'L'}</div>
                           </div>
                         </div>
-
-                        <div className="capacity-item-progress">
-                          <div className="flex justify-between text-xs mb-1 font-semibold">
-                            <span className="text-green">Subscribed/Sold: {p.soldCapacity} {p.unit}</span>
-                            <span className="text-gold">Remaining Available: {remaining} {p.unit}</span>
-                          </div>
-                          <div className="progress-bar">
-                            <div className="progress-fill" style={{ width: `${soldPct}%` }} />
-                          </div>
-                        </div>
-
-                        <div className="capacity-item-actions">
-                          <span className="text-xs text-muted">Milking Capacity:</span>
-                          <div className="yield-stepper">
-                            <button
-                              className="stepper-btn"
-                              onClick={() => handleQuickCapacityChange(p.id, -1)}
-                              disabled={p.totalCapacity <= p.soldCapacity}
-                            >−</button>
-                            <span className="stepper-val">{p.totalCapacity} {p.unit}</span>
-                            <button className="stepper-btn" onClick={() => handleQuickCapacityChange(p.id, 1)}>+</button>
-                          </div>
-                        </div>
+                        <span className={`badge ${getStatusBadgeClass(p.status || 'available')}`}>
+                          {formatStatus(p.status || 'available')}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Sales Chart */}
-            <div className="card farmer-section-card">
-              <div className="card-header flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-bold text-primary">📊 Weekly Milk Supply Volume & Revenue</h2>
-                  <p className="text-xs text-muted">Liters sold and daily income trends for current week</p>
-                </div>
-                <Link to="/farmer/sales" className="btn btn-secondary btn-sm">Full Analytics →</Link>
-              </div>
-              <div className="card-body">
-                <div style={{ width: '100%', height: 240 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e6f5eb" />
-                      <XAxis dataKey="day" stroke="#556b60" fontSize={12} />
-                      <YAxis stroke="#556b60" fontSize={12} />
-                      <Tooltip formatter={(val, name) => [name === 'revenue' ? `₹${val}` : `${val} L`, name === 'revenue' ? 'Revenue' : 'Volume (Liters)']} />
-                      <Bar dataKey="revenue" fill="hsl(142, 68%, 32%)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Today's Fulfillment Orders */}
-            <div className="card farmer-section-card">
+            <div className="card farmer-section-card mt-6">
               <div className="card-header flex justify-between items-center">
                 <div>
-                  <h2 className="text-lg font-bold text-primary">🚚 Morning Milk Deliveries & Customer Route</h2>
-                  <p className="text-xs text-muted">Assigned household morning (6:00 - 8:00 AM) and evening deliveries</p>
+                  <h2 className="text-lg font-bold text-primary">🚚 Customer Orders & Deliveries</h2>
+                  <p className="text-xs text-muted">Assigned household deliveries</p>
                 </div>
-                <Link to="/farmer/orders" className="btn btn-secondary btn-sm">Manage All Deliveries</Link>
+                <Link to="/farmer/orders" className="btn btn-secondary btn-sm">Manage Deliveries</Link>
               </div>
 
               <div className="card-body p-0">
-                <div className="overflow-auto">
-                  <table className="farmer-data-table">
-                    <thead>
-                      <tr>
-                        <th>Customer</th>
-                        <th>Milk / Dairy Product</th>
-                        <th>Quantity</th>
-                        <th>Slot</th>
-                        <th>Total</th>
-                        <th>Payment</th>
-                        <th className="text-right">Fulfillment</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr key={o.id}>
-                          <td>
-                            <div className="font-semibold text-primary">{o.customerName}</div>
-                            <div className="text-xs text-muted">ID: {o.customerId}</div>
-                          </td>
-                          <td>{o.product}</td>
-                          <td><strong>{o.quantity} {o.unit}</strong></td>
-                          <td className="capitalize">
-                            <span className="badge badge-active">{o.deliveryTime || 'Morning'}</span>
-                          </td>
-                          <td className="font-bold text-green">{formatCurrency(o.amount)}</td>
-                          <td>
-                            <span className={`badge ${getStatusBadgeClass(o.paymentStatus)}`}>
-                              {formatStatus(o.paymentStatus)}
-                            </span>
-                          </td>
-                          <td className="text-right">
-                            {o.orderStatus === 'active' ? (
-                              <button className="btn btn-primary btn-sm" onClick={() => handleMarkSupplied(o.id)}>
-                                Mark Delivered
-                              </button>
-                            ) : (
-                              <span className="badge badge-paid">✓ Delivered</span>
-                            )}
-                          </td>
+                {orders.length === 0 ? (
+                  <div className="p-8 text-center text-muted">
+                    <p className="font-semibold text-sm">No active customer orders today.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-auto">
+                    <table className="farmer-data-table">
+                      <thead>
+                        <tr>
+                          <th>Customer</th>
+                          <th>Milk / Product</th>
+                          <th>Quantity</th>
+                          <th>Slot</th>
+                          <th>Total</th>
+                          <th>Fulfillment</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {orders.map((o) => {
+                          const isSupplied = o.orderStatus === 'SUPPLIED' || o.orderStatus === 'DELIVERED';
+                          return (
+                            <tr key={o._id || o.orderId}>
+                              <td>
+                                <div className="font-semibold text-primary">{o.customer?.name || 'Customer'}</div>
+                              </td>
+                              <td>{o.product?.name || 'Milk'}</td>
+                              <td><strong>{o.quantity} {o.unit || 'L'}</strong></td>
+                              <td className="capitalize">{o.deliverySlot || 'MORNING'}</td>
+                              <td className="font-bold text-green">{formatCurrency(o.totalAmount)}</td>
+                              <td className="text-right">
+                                {!isSupplied ? (
+                                  <button className="btn btn-primary btn-sm" onClick={() => handleMarkSupplied(o._id || o.orderId)}>
+                                    Mark Delivered
+                                  </button>
+                                ) : (
+                                  <span className="badge badge-paid">✓ Delivered</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -299,10 +264,6 @@ export default function FarmerDashboard() {
                   <span>🥛 Add Daily Milk Variant</span>
                   <span className="arrow">→</span>
                 </Link>
-                <Link to="/farmer/capacity" className="farmer-quick-btn">
-                  <span>📊 Daily Milking Capacity Entry</span>
-                  <span className="arrow">→</span>
-                </Link>
                 <Link to="/farmer/billing" className="farmer-quick-btn">
                   <span>💰 Customer Monthly Bills</span>
                   <span className="arrow">→</span>
@@ -314,55 +275,26 @@ export default function FarmerDashboard() {
               </div>
             </div>
 
-            {/* Nearby Farmer Exchange Alert */}
-            <div className="card farmer-side-card exchange-widget">
-              <div className="card-header bg-gold-100 flex items-center gap-2">
-                <span className="text-xl">🤝</span>
-                <div>
-                  <h3 className="text-sm font-bold text-earth">Nearby Dairy Farmer Network</h3>
-                  <div className="text-xs text-muted">2 excess milk requests in area</div>
-                </div>
-              </div>
-              <div className="card-body flex flex-col gap-3">
-                {mockExchangeRequests.map((req) => (
-                  <div key={req.id} className="exchange-mini-item">
-                    <div className="flex justify-between items-start">
-                      <div className="font-semibold text-xs text-primary">{req.farmerName}</div>
-                      <span className="badge badge-pending text-xs">{req.distance}</span>
-                    </div>
-                    <div className="text-xs text-secondary mt-1">Needs: <strong>{req.requiredQty} {req.unit} {req.product}</strong></div>
-                    <Link to="/farmer/exchange" className="text-xs text-green font-semibold mt-2 block">
-                      Supply Excess Milk →
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Farm Profile Summary */}
             <div className="card farmer-side-card">
               <div className="card-body text-center flex flex-col items-center">
                 <div className="avatar avatar-xl avatar-green mb-3" style={{ fontSize: '28px' }}>
-                  {user?.name?.charAt(0) || 'R'}
+                  {user?.name?.charAt(0) || 'F'}
                 </div>
-                <h3 className="text-lg font-bold text-primary">{user?.farmName || 'Ravi Dairy Farm'}</h3>
-                <div className="text-xs text-muted">Verified Commercial Dairy Producer</div>
-                <div className="badge badge-paid mt-2">✓ Milking & Purity Inspected</div>
+                <h3 className="text-lg font-bold text-primary">{user?.farmName || user?.name || 'Dairy Farm'}</h3>
+                <div className="text-xs text-muted">Verified Dairy Producer</div>
+                <div className="badge badge-paid mt-2">✓ Purity Inspected</div>
 
                 <div className="divider" />
 
                 <div className="w-full text-left flex flex-col gap-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-muted">Dairy Cattle:</span>
-                    <strong>28 Cows</strong>
+                    <span className="text-muted">UPI ID:</span>
+                    <strong>{user?.upiId || 'Not set'}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted">Milking Yield:</span>
-                    <strong>140 Liters / Day</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted">Customer Rating:</span>
-                    <strong className="text-gold">★ 4.9 / 5.0</strong>
+                    <span className="text-muted">Phone:</span>
+                    <strong>{user?.phone || '—'}</strong>
                   </div>
                 </div>
 

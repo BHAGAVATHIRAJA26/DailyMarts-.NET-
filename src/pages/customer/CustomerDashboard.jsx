@@ -1,31 +1,77 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CustomerLayout from '../../layouts/CustomerLayout';
 import ProductCard from '../../components/products/ProductCard';
-import { mockProducts, mockOrders, mockNotifications, categories } from '../../utils/mockData';
-import { formatCurrency, formatDate, calcBillEstimate } from '../../utils/formatters';
+import { productService, subscriptionService, paymentService, notificationService } from '../../services';
+import { mockProducts, categories } from '../../utils/mockData';
+import { formatCurrency, calcBillEstimate } from '../../utils/formatters';
 import './CustomerDashboard.css';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('milk');
 
+  const [products, setProducts] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [bills, setBills] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
   // Interactive Live Calculator Widget State
   const [calcVolume, setCalcVolume] = useState(1);
   const [calcFreq, setCalcFreq] = useState('daily');
-  const [calcMilkType, setCalcMilkType] = useState('cow'); // 'cow' or 'a2'
+  const [calcMilkType, setCalcMilkType] = useState('cow');
 
   const calcPrice = calcMilkType === 'a2' ? 85 : 60;
   const estimatedMonthlyBill = calcBillEstimate(calcPrice, calcVolume, calcFreq, 30);
 
-  const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return mockProducts;
-    return mockProducts.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const activeMilkOrders = mockOrders.filter((o) => o.orderStatus === 'active');
-  const unreadNotifs = mockNotifications.filter((n) => !n.read).length;
+  const fetchDashboardData = async () => {
+    try {
+      const [prodRes, subRes, billRes, notifRes] = await Promise.allSettled([
+        productService.getAll(),
+        subscriptionService.getAll(),
+        paymentService.getBills(),
+        notificationService.getAll(),
+      ]);
+
+      if (prodRes.status === 'fulfilled' && prodRes.value.data?.data?.length > 0) {
+        setProducts(prodRes.value.data.data);
+      } else {
+        setProducts(mockProducts);
+      }
+
+      if (subRes.status === 'fulfilled') {
+        setSubscriptions(subRes.value.data?.data || []);
+      }
+      if (billRes.status === 'fulfilled') {
+        setBills(billRes.value.data?.data || []);
+      }
+      if (notifRes.status === 'fulfilled') {
+        const notifs = notifRes.value.data?.data || [];
+        setUnreadNotifCount(notifs.filter((n) => !n.read).length);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setProducts(mockProducts);
+    }
+  };
+
+  const filteredProducts = useMemo(() => {
+    const list = products.length > 0 ? products : mockProducts;
+    if (activeCategory === 'all') return list;
+    return list.filter((p) => {
+      const cat = (p.category || '').toLowerCase();
+      if (activeCategory === 'milk') return cat === 'milk';
+      if (activeCategory === 'milk_product') return cat.includes('product') || cat === 'ghee';
+      return cat === activeCategory;
+    });
+  }, [products, activeCategory]);
+
+  const pendingBillTotal = bills.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
 
   return (
     <CustomerLayout>
@@ -64,42 +110,21 @@ export default function CustomerDashboard() {
               </Link>
             </div>
 
-            {/* Live Delivery Status Tracker Widget */}
-            <div className="milk-live-tracker card">
-              <div className="tracker-header">
-                <span className="tracker-dot-pulsing" />
-                <span className="font-bold text-xs uppercase tracking-wider text-green">Today's Morning Delivery Status</span>
-              </div>
-              <div className="tracker-body flex items-center justify-between mt-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">🚚</span>
-                  <div>
-                    <div className="font-bold text-sm text-primary">1L Pure Fresh Cow Milk</div>
-                    <div className="text-xs text-muted">Dispatched from Ravi Dairy Farm</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="badge badge-active">On the Way</div>
-                  <div className="text-xs font-bold text-green mt-1">ETA: 6:30 AM</div>
-                </div>
-              </div>
-            </div>
-
             {/* Quick stats */}
             <div className="dashboard-hero-stats">
               <div className="hero-stat">
-                <span className="hero-stat-val">{activeMilkOrders.length}</span>
+                <span className="hero-stat-val">{subscriptions.length}</span>
                 <span className="hero-stat-label">Active Milk Subscriptions</span>
               </div>
               <div className="hero-stat-divider" />
               <div className="hero-stat">
-                <span className="hero-stat-val">₹{mockOrders.reduce((s, o) => s + o.remainingAmount, 0).toLocaleString('en-IN')}</span>
+                <span className="hero-stat-val">{formatCurrency(pendingBillTotal)}</span>
                 <span className="hero-stat-label">Pending Milk Bill</span>
               </div>
               <div className="hero-stat-divider" />
               <div className="hero-stat">
-                <span className="hero-stat-val">{unreadNotifs}</span>
-                <span className="hero-stat-label">Delivery Notifications</span>
+                <span className="hero-stat-val">{unreadNotifCount}</span>
+                <span className="hero-stat-label">Notifications</span>
               </div>
             </div>
           </div>
@@ -195,32 +220,40 @@ export default function CustomerDashboard() {
         </section>
 
         {/* Active Subscriptions Strip */}
-        {activeMilkOrders.length > 0 && (
+        {subscriptions.length > 0 && (
           <section className="dashboard-section">
             <div className="section-header">
               <div>
                 <h2 className="section-title">🥛 Active Daily Subscriptions</h2>
                 <p className="section-subtitle">Your active recurring daily milk deliveries</p>
               </div>
-              <Link to="/customer/orders" className="btn btn-secondary btn-sm">View All Subscriptions</Link>
+              <Link to="/customer/subscriptions" className="btn btn-secondary btn-sm">View All Subscriptions</Link>
             </div>
             <div className="active-orders-strip">
-              {activeMilkOrders.map((order) => (
-                <div key={order.id} className="active-order-card">
-                  <div className="active-order-emoji">{order.productEmoji}</div>
-                  <div className="active-order-info">
-                    <div className="active-order-name">{order.productName}</div>
-                    <div className="active-order-meta">{order.quantity} {order.unit} · {order.frequency} · {order.farmerName}</div>
-                    <div className="active-order-delivery">
-                      Next Delivery: <strong>{order.nextDelivery}</strong>
+              {subscriptions.map((sub) => {
+                const productName = sub.product?.name || 'Milk Subscription';
+                const productEmoji = sub.product?.emoji || '🥛';
+                const farmerName = sub.farmer?.farmName || sub.farmer?.name || 'Local Farmer';
+                const price = sub.pricePerUnit || sub.product?.price || 60;
+                const unit = sub.unit || sub.product?.unit || 'L';
+
+                return (
+                  <div key={sub._id || sub.subscriptionId} className="active-order-card">
+                    <div className="active-order-emoji">{productEmoji}</div>
+                    <div className="active-order-info">
+                      <div className="active-order-name">{productName}</div>
+                      <div className="active-order-meta">{sub.quantity} {unit} · {sub.frequency} · {farmerName}</div>
+                      <div className="active-order-delivery">
+                        Delivery Slot: <strong>{sub.deliverySlot || 'MORNING'}</strong>
+                      </div>
+                    </div>
+                    <div className="active-order-right">
+                      <div className="active-order-amount">{formatCurrency(price * sub.quantity)}/day</div>
+                      <span className="badge badge-active">{sub.status || 'ACTIVE'}</span>
                     </div>
                   </div>
-                  <div className="active-order-right">
-                    <div className="active-order-amount">{formatCurrency(order.pricePerUnit * order.quantity)}/day</div>
-                    <span className="badge badge-active">Active</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -265,7 +298,7 @@ export default function CustomerDashboard() {
           </div>
           <div className="products-grid">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product._id || product.productId || product.id} product={product} />
             ))}
           </div>
         </section>

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import CustomerLayout from '../../layouts/CustomerLayout';
+import { productService, orderService, subscriptionService } from '../../services';
 import { mockProducts } from '../../utils/mockData';
 import { formatCurrency, calcBillEstimate, getStatusBadgeClass, formatStatus } from '../../utils/formatters';
 import { useToast } from '../../context/ToastContext';
@@ -22,8 +23,9 @@ export default function ProductDetailPage() {
   const { id } = useParams();
   const toast = useToast();
   const navigate = useNavigate();
-  const product = mockProducts.find((p) => p.id === id) || mockProducts[0];
 
+  const [product, setProduct] = useState(null);
+  const [fetchingProduct, setFetchingProduct] = useState(true);
   const [qty, setQty] = useState(1);
   const [frequency, setFrequency] = useState('daily');
   const [deliveryTime, setDeliveryTime] = useState('morning');
@@ -34,19 +36,85 @@ export default function ProductDetailPage() {
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
 
-  const estimate = calcBillEstimate(product.price, qty, frequency, duration);
-  const isMilk = product.category === 'milk';
+  useEffect(() => {
+    fetchProductDetail();
+  }, [id]);
 
-  const handleOrder = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success('Order Placed!', `Your ${product.name} order has been confirmed.`);
-    setLoading(false);
-    navigate('/customer/orders');
+  const fetchProductDetail = async () => {
+    try {
+      setFetchingProduct(true);
+      const res = await productService.getById(id);
+      if (res.data?.data) {
+        setProduct(res.data.data);
+      } else {
+        const mock = mockProducts.find((p) => p.id === id || p.productId === id) || mockProducts[0];
+        setProduct(mock);
+      }
+    } catch (err) {
+      console.error('Failed to fetch product detail from backend:', err);
+      const mock = mockProducts.find((p) => p.id === id || p.productId === id) || mockProducts[0];
+      setProduct(mock);
+    } finally {
+      setFetchingProduct(false);
+    }
   };
 
-  const statusClass = getStatusBadgeClass(product.status);
-  const isSoldOut = product.status === 'sold-out';
+  if (fetchingProduct) {
+    return (
+      <CustomerLayout>
+        <div className="product-detail-page p-8 text-center">
+          <div className="animate-spin text-3xl mb-2">🔄</div>
+          <p className="text-muted">Loading product details...</p>
+        </div>
+      </CustomerLayout>
+    );
+  }
+
+  if (!product) return null;
+
+  const estimate = calcBillEstimate(product.price, qty, frequency, duration);
+  const isMilk = (product.category || '').toUpperCase().includes('MILK');
+  const farmerName = product.farmer?.farmName || product.farmer?.name || product.farmerName || 'Local Farmer';
+  const locationName = product.farmer?.city || product.location || 'Dindigul';
+  const unit = product.unit || 'L';
+  const availCap = product.availableCapacity || 50;
+
+  const handleOrder = async () => {
+    try {
+      setLoading(true);
+      if (frequency === 'monthly' || frequency === 'once') {
+        // One-time order
+        await orderService.create({
+          productId: product._id || product.productId || product.id,
+          quantity: qty,
+          deliverySlot: deliveryTime.toUpperCase(),
+          deliveryDate: startDate,
+        });
+        toast.success('Order Placed!', `Your ${product.name} order has been confirmed.`);
+        navigate('/customer/orders');
+      } else {
+        // Recurring subscription
+        await subscriptionService.create({
+          productId: product._id || product.productId || product.id,
+          quantity: qty,
+          frequency: frequency.toUpperCase(),
+          deliverySlot: deliveryTime.toUpperCase(),
+          startDate,
+          durationDays: duration,
+        });
+        toast.success('Subscription Created!', `Your recurring subscription for ${product.name} has been set up.`);
+        navigate('/customer/subscriptions');
+      }
+    } catch (err) {
+      console.error('Order creation error:', err);
+      toast.error('Order Failed', err.response?.data?.message || err.message || 'Could not place order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statusClass = getStatusBadgeClass(product.status || 'available');
+  const isSoldOut = product.status === 'sold-out' || product.status === 'SOLD_OUT';
 
   return (
     <CustomerLayout>
@@ -62,7 +130,7 @@ export default function ProductDetailPage() {
           {/* Left: Image + Info */}
           <div className="product-detail-left">
             <div className="product-detail-img-card">
-              <div className="product-detail-emoji">{product.emoji}</div>
+              <div className="product-detail-emoji">{product.emoji || '🥛'}</div>
               {product.isOrganic && (
                 <div className="product-detail-organic">🌿 Certified Organic</div>
               )}
@@ -71,12 +139,13 @@ export default function ProductDetailPage() {
             {/* Product info */}
             <div className="product-detail-info card">
               <div className="card-body">
-                <div className="product-detail-id">Product ID: {product.id}</div>
+                <div className="product-detail-id">Product ID: #{product.productId || product.id}</div>
                 <h1 className="product-detail-name">{product.name}</h1>
 
                 <div className="flex items-center gap-2 mt-2 mb-3">
-                  <span className={`badge ${statusClass}`}>{formatStatus(product.status)}</span>
+                  <span className={`badge ${statusClass}`}>{formatStatus(product.status || 'AVAILABLE')}</span>
                   {product.isOrganic && <span className="badge badge-paid">Organic</span>}
+                  {product.isA2 && <span className="badge badge-paid">A2 Pure</span>}
                 </div>
 
                 {product.rating && (
@@ -85,42 +154,35 @@ export default function ProductDetailPage() {
                       {'★'.repeat(Math.round(product.rating))}{'☆'.repeat(5 - Math.round(product.rating))}
                     </span>
                     <span className="text-sm font-semibold">{product.rating}</span>
-                    <span className="text-muted text-sm">({product.reviewCount} reviews)</span>
+                    <span className="text-muted text-sm">({product.reviewCount || 50} reviews)</span>
                   </div>
                 )}
 
-                <p className="product-detail-desc">{product.description}</p>
+                <p className="product-detail-desc">{product.description || 'Fresh pure farm product directly from trusted local farmers.'}</p>
 
                 {/* Farmer */}
                 <div className="product-detail-farmer-card">
                   <div className="avatar avatar-md avatar-green" style={{ fontSize: '20px' }}>
-                    {product.farmerName.charAt(0)}
+                    {farmerName.charAt(0)}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold">{product.farmerName}</div>
-                    <div className="text-xs text-muted">{product.farmName} · 📍 {product.location}</div>
+                    <div className="text-sm font-semibold">{farmerName}</div>
+                    <div className="text-xs text-muted">📍 {locationName}</div>
                   </div>
-                  <span className="badge badge-paid" style={{ marginLeft: 'auto' }}>✓ Verified</span>
+                  <span className="badge badge-paid" style={{ marginLeft: 'auto' }}>✓ Verified Farmer</span>
                 </div>
 
                 {/* Capacity */}
                 <div className="product-detail-capacity">
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-secondary">Today's Availability</span>
-                    <span className="font-semibold text-green">{product.availableCapacity} {product.unit} remaining</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${Math.round(product.soldCapacity / product.totalCapacity * 100)}%` }} />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted mt-1">
-                    <span>Sold: {product.soldCapacity} {product.unit}</span>
-                    <span>Total: {product.totalCapacity} {product.unit}</span>
+                    <span className="font-semibold text-green">{availCap} {unit} remaining</span>
                   </div>
                 </div>
 
                 <div className="product-detail-price">
                   <span className="product-detail-price-val">{formatCurrency(product.price)}</span>
-                  <span className="text-muted">/{product.unit}</span>
+                  <span className="text-muted">/{unit}</span>
                 </div>
               </div>
             </div>
@@ -136,11 +198,11 @@ export default function ProductDetailPage() {
 
                 {/* Quantity */}
                 <div className="config-section">
-                  <div className="config-label">Quantity ({product.unit})</div>
+                  <div className="config-label">Quantity ({unit})</div>
                   <div className="qty-selector">
                     <button className="qty-btn" onClick={() => setQty(Math.max(0.5, qty - (isMilk ? 0.5 : 1)))}>−</button>
-                    <span className="qty-val">{qty} {product.unit}</span>
-                    <button className="qty-btn" onClick={() => setQty(Math.min(product.availableCapacity, qty + (isMilk ? 0.5 : 1)))}>+</button>
+                    <span className="qty-val">{qty} {unit}</span>
+                    <button className="qty-btn" onClick={() => setQty(Math.min(availCap, qty + (isMilk ? 0.5 : 1)))}>+</button>
                   </div>
                   {isMilk && (
                     <div className="config-presets">
@@ -195,7 +257,7 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Duration (for recurring) */}
-                {frequency !== 'once' && (
+                {frequency !== 'monthly' && frequency !== 'once' && (
                   <div className="config-section">
                     <div className="config-label">Duration</div>
                     <div className="config-options">
@@ -212,7 +274,7 @@ export default function ProductDetailPage() {
                 <div className="bill-estimate">
                   <div className="bill-estimate-title">Estimated Bill</div>
                   <div className="bill-estimate-row">
-                    <span>{qty} {product.unit} × {formatCurrency(product.price)}</span>
+                    <span>{qty} {unit} × {formatCurrency(product.price)}</span>
                     <span>{frequency === 'daily' ? `× ${duration} days` : ''}</span>
                   </div>
                   <div className="bill-estimate-total">
@@ -228,7 +290,7 @@ export default function ProductDetailPage() {
                   disabled={isSoldOut || loading}
                   id="place-order-btn"
                 >
-                  {loading ? '⟳ Placing Order…' : isSoldOut ? 'Currently Sold Out' : isMilk ? '🥛 Subscribe Now' : '🛒 Place Order'}
+                  {loading ? '⟳ Processing Order…' : isSoldOut ? 'Currently Sold Out' : isMilk ? '🥛 Subscribe Now' : '🛒 Place Order'}
                 </button>
 
                 {!isSoldOut && (

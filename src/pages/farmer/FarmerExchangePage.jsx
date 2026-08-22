@@ -1,56 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FarmerLayout from '../../layouts/FarmerLayout';
-import { mockExchangeRequests } from '../../utils/mockData';
 import Modal from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import { formatCurrency } from '../../utils/formatters';
+import { farmerService } from '../../services';
 import './FarmerExchangePage.css';
-
-const MOCK_EXCHANGE_DATA = [
-  {
-    id: 'EX-001',
-    farmerId: 'F002',
-    farmerName: 'Suresh Pandi',
-    farmName: 'Green Valley Farm',
-    location: 'Madurai',
-    type: 'paid', // 'exchange' or 'paid'
-    product: 'Pure Fresh Cow Milk',
-    requiredQty: 10,
-    unit: 'L',
-    pricePerUnit: 60,
-    offeredProduct: null,
-    distance: '5.1 km',
-    requestDate: '2026-08-22',
-    notes: 'Urgent: Morning customer demand exceeded yield. Will pay ₹60/L via UPI.',
-    status: 'open',
-  },
-  {
-    id: 'EX-002',
-    farmerId: 'F004',
-    farmerName: 'Arjun Pillai',
-    farmName: 'Pillai A2 Farm',
-    location: 'Tirunelveli',
-    type: 'exchange', // 'exchange' or 'paid'
-    product: 'A2 Gir Cow Milk',
-    requiredQty: 5,
-    unit: 'L',
-    pricePerUnit: null,
-    offeredProduct: '1 Jar (500g) Traditional Bilona Ghee',
-    distance: '12.0 km',
-    requestDate: '2026-08-21',
-    notes: 'Looking to swap 500g Bilona Ghee for 5L A2 Milk.',
-    status: 'open',
-  },
-];
 
 export default function FarmerExchangePage() {
   const toast = useToast();
-  const [requests, setRequests] = useState(MOCK_EXCHANGE_DATA);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isRaiseOpen, setIsRaiseOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // New Request Form State
-  const [requestMode, setRequestMode] = useState('exchange'); // 'exchange' or 'paid'
+  const [requestMode, setRequestMode] = useState('exchange');
   const [newRequest, setNewRequest] = useState({
     product: 'Pure Fresh Cow Milk',
     quantity: 5,
@@ -60,45 +25,67 @@ export default function FarmerExchangePage() {
     notes: '',
   });
 
+  useEffect(() => {
+    fetchExchangeRequests();
+  }, []);
+
+  const fetchExchangeRequests = async () => {
+    try {
+      setLoading(true);
+      const res = await farmerService.getExchangeRequests();
+      setRequests(res.data?.data || []);
+    } catch (err) {
+      console.error('Failed to load exchange requests:', err);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAcceptRequest = (req) => {
     setSelectedRequest(req);
   };
 
-  const handleConfirmAccept = () => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === selectedRequest.id ? { ...r, status: 'accepted' } : r))
-    );
-    toast.success(
-      'Transaction Confirmed!',
-      selectedRequest.type === 'paid'
-        ? `Agreed to supply ${selectedRequest.requiredQty} ${selectedRequest.unit} for ${formatCurrency(selectedRequest.requiredQty * selectedRequest.pricePerUnit)}.`
-        : `Agreed to swap ${selectedRequest.product} for ${selectedRequest.offeredProduct}.`
-    );
-    setSelectedRequest(null);
+  const handleConfirmAccept = async () => {
+    if (!selectedRequest) return;
+    try {
+      await farmerService.acceptExchange(selectedRequest._id || selectedRequest.id);
+      toast.success(
+        'Transaction Confirmed!',
+        selectedRequest.type === 'paid'
+          ? `Agreed to supply ${selectedRequest.requiredQty} ${selectedRequest.unit} for ${formatCurrency(selectedRequest.requiredQty * (selectedRequest.pricePerUnit || 60))}.`
+          : `Agreed to swap ${selectedRequest.product} for ${selectedRequest.offeredProduct}.`
+      );
+      fetchExchangeRequests();
+    } catch (err) {
+      toast.error('Action Failed', err.response?.data?.message || err.message);
+    } finally {
+      setSelectedRequest(null);
+    }
   };
 
-  const handleRaiseSubmit = (e) => {
+  const handleRaiseSubmit = async (e) => {
     e.preventDefault();
-    const created = {
-      id: `EX-00${requests.length + 1}`,
-      farmerId: 'F001',
-      farmerName: 'Ravi Kumar',
-      farmName: 'Ravi Dairy Farm',
-      location: 'Dindigul',
-      type: requestMode,
-      product: newRequest.product,
-      requiredQty: newRequest.quantity,
-      unit: newRequest.unit,
-      pricePerUnit: requestMode === 'paid' ? Math.round(newRequest.offeredAmount / newRequest.quantity) : null,
-      offeredProduct: requestMode === 'exchange' ? newRequest.offeredProduct : null,
-      distance: '0 km',
-      requestDate: new Date().toISOString().slice(0, 10),
-      notes: newRequest.notes || (requestMode === 'paid' ? `Paying ${formatCurrency(newRequest.offeredAmount)} total` : `Swapping for ${newRequest.offeredProduct}`),
-      status: 'open',
-    };
-    setRequests([created, ...requests]);
-    setIsRaiseOpen(false);
-    toast.success('Request Published', `Your ${requestMode === 'paid' ? 'Paid Supply' : 'Product Exchange'} request is now live for nearby farmers.`);
+    try {
+      setSubmitting(true);
+      await farmerService.raiseExchange({
+        type: requestMode,
+        product: newRequest.product,
+        requiredQty: newRequest.quantity,
+        unit: newRequest.unit,
+        offeredProduct: requestMode === 'exchange' ? newRequest.offeredProduct : null,
+        offeredAmount: requestMode === 'paid' ? newRequest.offeredAmount : null,
+        notes: newRequest.notes,
+      });
+
+      toast.success('Request Published', `Your ${requestMode === 'paid' ? 'Paid Supply' : 'Product Exchange'} request is now live for nearby farmers.`);
+      setIsRaiseOpen(false);
+      fetchExchangeRequests();
+    } catch (err) {
+      toast.error('Failed to Raise Request', err.response?.data?.message || err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -137,63 +124,86 @@ export default function FarmerExchangePage() {
 
         {/* Nearby Requests List */}
         <h2 className="text-lg font-bold mb-4">Active Nearby Requests ({requests.length})</h2>
-        <div className="grid grid-2 gap-6">
-          {requests.map((req) => (
-            <div key={req.id} className="card p-6 flex flex-col justify-between hover-lift">
-              <div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="avatar avatar-md avatar-green">{req.farmerName.charAt(0)}</div>
-                    <div>
-                      <div className="font-bold text-base text-primary">{req.farmerName}</div>
-                      <div className="text-xs text-muted">🏡 {req.farmName} · 📍 {req.location} ({req.distance})</div>
+
+        {loading ? (
+          <div className="card p-8 text-center">
+            <div className="animate-spin text-3xl mb-2">🔄</div>
+            <p className="text-muted">Loading nearby farmer exchange requests...</p>
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="empty-state card p-8 text-center">
+            <div className="empty-state-icon text-5xl mb-3">🤝</div>
+            <div className="empty-state-title font-bold text-xl mb-1">No Active Exchange Requests</div>
+            <div className="empty-state-desc text-muted mb-4">Click "+ Raise Exchange / Paid Request" to swap excess milk or request products from neighboring dairy farmers.</div>
+            <button className="btn btn-gold" onClick={() => setIsRaiseOpen(true)}>
+              + Raise First Request
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-2 gap-6">
+            {requests.map((req) => {
+              const reqId = req._id || req.id;
+              const farmerName = req.farmer?.name || req.farmerName || 'Nearby Farmer';
+              const farmName = req.farmer?.farmName || req.farmName || 'Local Dairy';
+
+              return (
+                <div key={reqId} className="card p-6 flex flex-col justify-between hover-lift">
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="avatar avatar-md avatar-green">{farmerName.charAt(0)}</div>
+                        <div>
+                          <div className="font-bold text-base text-primary">{farmerName}</div>
+                          <div className="text-xs text-muted">🏡 {farmName}</div>
+                        </div>
+                      </div>
+
+                      <span className={`badge ${req.type === 'paid' ? 'badge-pending' : 'badge-active'}`}>
+                        {req.type === 'paid' ? '💰 Paid Purchase' : '🔄 Product Swap'}
+                      </span>
+                    </div>
+
+                    <div className="bg-cream p-4 rounded-lg mb-3 border border-light">
+                      <div className="text-xs text-muted font-bold uppercase">Requested Product</div>
+                      <div className="text-base font-bold text-primary mt-1">
+                        {req.product} — <span className="text-green">{req.requiredQty || req.quantity} {req.unit || 'L'}</span>
+                      </div>
+
+                      <div className="divider" style={{ margin: '8px 0' }} />
+
+                      {req.type === 'paid' ? (
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted">Offered Payment:</span>
+                          <strong className="text-sm text-gold">
+                            {formatCurrency(req.offeredAmount || (req.requiredQty * (req.pricePerUnit || 60)))}
+                          </strong>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted">Offered Product Swap:</span>
+                          <strong className="text-sm text-green">🎁 {req.offeredProduct}</strong>
+                        </div>
+                      )}
+
+                      {req.notes && <div className="text-xs text-muted mt-2 italic">"{req.notes}"</div>}
                     </div>
                   </div>
 
-                  <span className={`badge ${req.type === 'paid' ? 'badge-pending' : 'badge-active'}`}>
-                    {req.type === 'paid' ? '💰 Paid Purchase' : '🔄 Product Swap'}
-                  </span>
-                </div>
-
-                <div className="bg-cream p-4 rounded-lg mb-3 border border-light">
-                  <div className="text-xs text-muted font-bold uppercase">Requested Product</div>
-                  <div className="text-base font-bold text-primary mt-1">
-                    {req.product} — <span className="text-green">{req.requiredQty} {req.unit}</span>
+                  <div className="flex justify-between items-center pt-3 border-t border-light mt-2">
+                    <span className="text-xs text-muted">Status: <strong className="uppercase">{req.status || 'OPEN'}</strong></span>
+                    {req.status === 'open' || req.status === 'OPEN' ? (
+                      <button className="btn btn-primary btn-sm" onClick={() => handleAcceptRequest(req)}>
+                        {req.type === 'paid' ? '💵 Sell & Collect Payment' : '🔄 Swap Product'}
+                      </button>
+                    ) : (
+                      <span className="badge badge-paid">✓ Transaction Confirmed</span>
+                    )}
                   </div>
-
-                  <div className="divider" style={{ margin: '8px 0' }} />
-
-                  {req.type === 'paid' ? (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted">Offered Payment:</span>
-                      <strong className="text-sm text-gold">
-                        {formatCurrency(req.pricePerUnit)} / {req.unit} (Total: {formatCurrency(req.requiredQty * req.pricePerUnit)})
-                      </strong>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted">Offered Product Swap:</span>
-                      <strong className="text-sm text-green">🎁 {req.offeredProduct}</strong>
-                    </div>
-                  )}
-
-                  {req.notes && <div className="text-xs text-muted mt-2 italic">"{req.notes}"</div>}
                 </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-3 border-t border-light mt-2">
-                <span className="text-xs text-muted">Posted: {req.requestDate}</span>
-                {req.status === 'open' ? (
-                  <button className="btn btn-primary btn-sm" onClick={() => handleAcceptRequest(req)}>
-                    {req.type === 'paid' ? '💵 Sell & Collect Payment' : '🔄 Swap Product'}
-                  </button>
-                ) : (
-                  <span className="badge badge-paid">✓ Transaction Confirmed</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
       </div>
 
@@ -273,9 +283,6 @@ export default function FarmerExchangePage() {
                 value={newRequest.offeredAmount}
                 onChange={(e) => setNewRequest({ ...newRequest, offeredAmount: Number(e.target.value) })}
               />
-              <span className="text-xs text-muted mt-1">
-                Amount you will pay upon delivery ({formatCurrency(Math.round(newRequest.offeredAmount / newRequest.quantity))}/{newRequest.unit}).
-              </span>
             </div>
           )}
 
@@ -286,8 +293,8 @@ export default function FarmerExchangePage() {
 
           <div className="flex justify-end gap-3 mt-4">
             <button type="button" className="btn btn-ghost" onClick={() => setIsRaiseOpen(false)}>Cancel</button>
-            <button type="submit" className="btn btn-gold">
-              {requestMode === 'exchange' ? '🔄 Post Product Exchange' : '💰 Post Paid Purchase Request'}
+            <button type="submit" className="btn btn-gold" disabled={submitting}>
+              {submitting ? 'Publishing...' : requestMode === 'exchange' ? '🔄 Post Product Exchange' : '💰 Post Paid Purchase Request'}
             </button>
           </div>
 
@@ -301,8 +308,8 @@ export default function FarmerExchangePage() {
             <div className="bg-cream p-4 rounded-lg">
               <div className="text-xs text-muted uppercase font-bold">Request Details</div>
               <div className="text-lg font-bold text-primary mt-1">{selectedRequest.product}</div>
-              <div className="text-sm text-secondary">Farmer: {selectedRequest.farmerName} ({selectedRequest.farmName})</div>
-              <div className="text-sm text-green font-bold mt-2">Quantity: {selectedRequest.requiredQty} {selectedRequest.unit}</div>
+              <div className="text-sm text-secondary">Farmer: {selectedRequest.farmer?.name || selectedRequest.farmerName}</div>
+              <div className="text-sm text-green font-bold mt-2">Quantity: {selectedRequest.requiredQty || selectedRequest.quantity} {selectedRequest.unit || 'L'}</div>
 
               <div className="divider" />
 
@@ -310,9 +317,8 @@ export default function FarmerExchangePage() {
                 <div>
                   <div className="text-xs text-muted">You will receive:</div>
                   <div className="text-xl font-extrabold text-gold">
-                    {formatCurrency(selectedRequest.requiredQty * selectedRequest.pricePerUnit)}
+                    {formatCurrency(selectedRequest.offeredAmount || ((selectedRequest.requiredQty || 1) * 60))}
                   </div>
-                  <div className="text-xs text-muted">Payment mode: UPI / Cash upon delivery</div>
                 </div>
               ) : (
                 <div>
