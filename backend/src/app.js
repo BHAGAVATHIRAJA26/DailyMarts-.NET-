@@ -48,7 +48,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// REST API Routes
+// REST API Routes (Primary /api mounts)
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/inventory', inventoryRoutes);
@@ -60,8 +60,22 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/cancellations', cancellationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/exchanges', exchangeRoutes);
-app.use('/api/farmers', exchangeRoutes); // Alias for /api/farmers/nearby
+app.use('/api/farmers', exchangeRoutes);
 app.use('/api/reports', reportRoutes);
+
+// Direct Route Aliases (Handles requests without /api prefix smoothly)
+app.use('/auth', authRoutes);
+app.use('/products', productRoutes);
+app.use('/inventory', inventoryRoutes);
+app.use('/orders', orderRoutes);
+app.use('/subscriptions', subscriptionRoutes);
+app.use('/deliveries', deliveryRoutes);
+app.use('/bills', billRoutes);
+app.use('/payments', paymentRoutes);
+app.use('/cancellations', cancellationRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/exchanges', exchangeRoutes);
+app.use('/reports', reportRoutes);
 
 // Error Handling Middleware
 app.use(notFound);
