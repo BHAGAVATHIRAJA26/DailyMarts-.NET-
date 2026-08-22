@@ -117,4 +117,54 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe };
+// @desc    Update user profile
+// @route   PUT /api/auth/profile or /api/auth/me
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    const { name, phone, address, city, district, state, pincode, farmName, upiId, categories, dairyCowsCount, dailyYieldEstimate } = req.body;
+
+    if (name) user.name = name.trim();
+    if (phone) user.phone = phone.trim();
+    if (address) user.address = address.trim();
+    if (city) user.city = city.trim();
+    if (district) user.district = district.trim();
+    if (state) user.state = state.trim();
+    if (pincode) user.pincode = pincode.trim();
+    if (farmName && user.role === 'FARMER') user.farmName = farmName.trim();
+    if (upiId !== undefined && user.role === 'FARMER') user.upiId = upiId ? upiId.trim() : null;
+    if (categories && user.role === 'FARMER') user.categories = Array.isArray(categories) ? categories : user.categories;
+    if (dairyCowsCount !== undefined && user.role === 'FARMER') user.dairyCowsCount = Number(dairyCowsCount);
+    if (dailyYieldEstimate !== undefined && user.role === 'FARMER') user.dailyYieldEstimate = dailyYieldEstimate;
+
+    const updatedUser = await user.save();
+
+    return successResponse(res, 200, 'Profile updated successfully', {
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+      farmName: updatedUser.farmName,
+      upiId: updatedUser.upiId,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      district: updatedUser.district,
+      state: updatedUser.state,
+      pincode: updatedUser.pincode,
+      categories: updatedUser.categories,
+      dairyCowsCount: updatedUser.dairyCowsCount,
+      dailyYieldEstimate: updatedUser.dailyYieldEstimate,
+    });
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
+module.exports = { registerUser, loginUser, getMe, updateProfile };
