@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="dmBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+    <linearGradient id="dmMilkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="dmLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86efac" />
+      <stop offset="100%" stop-color="#22c55e" />
+    </linearGradient>
+    <filter id="dmShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Container Base -->
+  <rect width="512" height="512" rx="128" fill="url(#dmBgGrad)" />
+
+  <!-- Outer Ring Accent -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="#86efac" stroke-width="6" opacity="0.3" />
+
+  <!-- Pure White Milk Drop -->
+  <path d="M256 80 C256 80, 136 240, 136 340 C136 406.27 189.73 460 256 460 C322.27 460 376 406.27 376 340 C376 240, 256 80, 256 80 Z" fill="url(#dmMilkGrad)" filter="url(#dmShadow)" />
+
+  <!-- Organic Green Leaf inside Milk Drop -->
+  <path d="M256 210 C324 210, 344 290, 314 345 C284 400, 214 380, 234 305 C244 265, 256 210, 256 210 Z" fill="url(#dmLeafGrad)" />
+  <path d="M256 210 Q272 285 314 345" stroke="#15803d" stroke-width="7" stroke-linecap="round" fill="none" />
+</svg>

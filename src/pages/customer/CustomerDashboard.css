@@ -1,0 +1,376 @@
+/* =====================================================
+   DailyMarts — Customer Dashboard Styling (Milk Focused)
+   ===================================================== */
+
+.customer-dashboard {
+  padding: 0;
+  background: var(--bg-primary);
+}
+
+/* Milk Purity Announcement Bar */
+.milk-purity-bar {
+  background: linear-gradient(90deg, #0369a1, #0284c7, #0d9488);
+  color: #ffffff;
+  padding: 8px var(--space-6);
+  font-size: var(--text-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-xs);
+}
+
+.purity-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  opacity: 0.5;
+}
+
+/* Hero Section */
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: var(--space-8);
+  align-items: center;
+  background: linear-gradient(140deg,
+    hsl(205, 85%, 12%) 0%,
+    hsl(142, 70%, 18%) 50%,
+    hsl(142, 58%, 26%) 100%
+  );
+  padding: var(--space-12) var(--space-10);
+  position: relative;
+  overflow: hidden;
+  min-height: 400px;
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 30%, rgba(245, 182, 25, 0.18) 0%, transparent 55%),
+              radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 45%);
+}
+
+.dashboard-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+}
+
+.dashboard-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: var(--space-4);
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-hero-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: var(--space-3);
+}
+
+.dashboard-hero-accent {
+  color: var(--gold-400);
+  text-shadow: 0 0 20px rgba(245, 182, 25, 0.40);
+}
+
+.dashboard-hero-desc {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.6;
+  margin-bottom: var(--space-6);
+}
+
+.dashboard-hero-actions {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+/* Live Delivery Tracker Widget */
+.milk-live-tracker {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.tracker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tracker-dot-pulsing {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse 1.8s infinite;
+}
+
+.dashboard-hero-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-stat-val {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.hero-stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.hero-stat-divider {
+  width: 1px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Visual Grid */
+.dashboard-hero-visual {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-visual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.hero-visual-item {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  text-align: center;
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-normal);
+}
+
+.hero-visual-item:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.hero-visual-emoji {
+  font-size: 44px;
+  margin-bottom: var(--space-2);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.hero-visual-label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hero-visual-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 2px;
+}
+
+/* Calculator Section */
+.milk-calc-card {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--white);
+  border: 1.5px solid rgba(59, 130, 246, 0.2);
+  box-shadow: var(--shadow-md);
+}
+
+.milk-calc-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.milk-calc-right {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.calc-total-amount {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #0369a1;
+  margin-top: var(--space-2);
+}
+
+/* Sections */
+.dashboard-section {
+  padding: var(--space-8);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dashboard-section:last-child { border-bottom: none; }
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+/* Active Orders Strip */
+.active-orders-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.active-order-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  background: var(--white);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.active-order-card:hover {
+  border-color: var(--green-300);
+  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+}
+
+.active-order-emoji { font-size: 40px; flex-shrink: 0; }
+
+.active-order-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.active-order-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.active-order-meta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.active-order-delivery {
+  font-size: var(--text-xs);
+  color: var(--green-600);
+  font-weight: 600;
+}
+
+.active-order-amount {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--green-700);
+}
+
+/* Category Filter Chips */
+.category-strip {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: 1.5px solid var(--border-light);
+  background: var(--white);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+}
+
+.category-chip:hover {
+  border-color: var(--green-300);
+  background: var(--green-50);
+  color: var(--green-700);
+  transform: translateY(-2px);
+}
+
+.category-chip.active {
+  background: linear-gradient(135deg, var(--green-600), var(--green-700));
+  border-color: var(--green-700);
+  color: #ffffff;
+  box-shadow: var(--shadow-green-glow);
+}
+
+/* Products grid */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-6);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .dashboard-hero { grid-template-columns: 1fr; padding: var(--space-8) var(--space-6); }
+  .dashboard-hero-visual { display: none; }
+  .milk-calc-card { grid-template-columns: 1fr; }
+  .dashboard-section { padding: var(--space-6) var(--space-4); }
+}

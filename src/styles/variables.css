@@ -1,0 +1,134 @@
+/* =====================================================
+   DailyMarts — Premium Design System Tokens
+   ===================================================== */
+
+:root {
+  /* === Primary Emerald Green Palette === */
+  --green-50:  hsl(142, 60%, 96%);
+  --green-100: hsl(142, 55%, 90%);
+  --green-200: hsl(142, 52%, 80%);
+  --green-300: hsl(142, 50%, 65%);
+  --green-400: hsl(142, 58%, 46%);
+  --green-500: hsl(142, 70%, 36%);
+  --green-600: hsl(142, 76%, 28%);
+  --green-700: hsl(142, 80%, 20%);
+  --green-800: hsl(142, 82%, 14%);
+  --green-900: hsl(142, 85%, 9%);
+
+  /* === Gold / Amber Accents === */
+  --gold-50:  hsl(43, 100%, 97%);
+  --gold-100: hsl(43, 90%, 92%);
+  --gold-300: hsl(43, 88%, 70%);
+  --gold-400: hsl(43, 92%, 58%);
+  --gold-500: hsl(40, 95%, 48%);
+  --gold-600: hsl(36, 95%, 42%);
+  --gold-700: hsl(30, 90%, 34%);
+
+  /* === Earth / Warm Terracotta === */
+  --earth-50:  hsl(30, 45%, 97%);
+  --earth-100: hsl(30, 40%, 92%);
+  --earth-200: hsl(30, 36%, 80%);
+  --earth-300: hsl(30, 34%, 64%);
+  --earth-500: hsl(30, 38%, 44%);
+  --earth-700: hsl(30, 40%, 26%);
+
+  /* === Neutral / Cream Canvas === */
+  --cream:     hsl(48, 35%, 97%);
+  --cream-100: hsl(48, 30%, 93%);
+  --cream-200: hsl(45, 26%, 87%);
+  --white:     #ffffff;
+  --black:     #080a0c;
+
+  /* === Text Colors === */
+  --text-primary:   hsl(218, 28%, 14%);
+  --text-secondary: hsl(218, 16%, 36%);
+  --text-muted:     hsl(218, 12%, 56%);
+  --text-light:     hsl(218, 10%, 72%);
+  --text-on-green:  #ffffff;
+
+  /* === Background Colors === */
+  --bg-primary:   hsl(48, 35%, 97%);
+  --bg-secondary: #ffffff;
+  --bg-card:      #ffffff;
+  --bg-overlay:   rgba(10, 20, 14, 0.65);
+
+  /* === Status Colors === */
+  --status-paid-bg:        hsl(142, 60%, 93%);
+  --status-paid-text:      hsl(142, 75%, 22%);
+  --status-paid-border:    hsl(142, 55%, 72%);
+
+  --status-pending-bg:     hsl(43, 95%, 93%);
+  --status-pending-text:   hsl(36, 92%, 28%);
+  --status-pending-border: hsl(43, 88%, 70%);
+
+  --status-overdue-bg:     hsl(0, 85%, 95%);
+  --status-overdue-text:   hsl(0, 78%, 36%);
+  --status-overdue-border: hsl(0, 75%, 75%);
+
+  --status-cancelled-bg:   hsl(220, 15%, 93%);
+  --status-cancelled-text: hsl(220, 12%, 40%);
+  --status-cancelled-border: hsl(220, 10%, 74%);
+
+  --status-active-bg:      hsl(210, 95%, 94%);
+  --status-active-text:    hsl(210, 85%, 30%);
+  --status-active-border:  hsl(210, 80%, 72%);
+
+  --status-partial-bg:     hsl(270, 65%, 94%);
+  --status-partial-text:   hsl(270, 60%, 32%);
+  --status-partial-border: hsl(270, 55%, 74%);
+
+  /* === Premium Glassmorphism & Borders === */
+  --border-light:  hsl(218, 16%, 90%);
+  --border-medium: hsl(218, 14%, 82%);
+  --border-dark:   hsl(218, 12%, 68%);
+  --border-green:  hsl(142, 50%, 76%);
+  --glass-border:  rgba(255, 255, 255, 0.45);
+  --glass-bg:      rgba(255, 255, 255, 0.75);
+
+  /* === Multi-Layered Shadows === */
+  --shadow-xs:  0 1px 2px rgba(10, 30, 15, 0.04);
+  --shadow-sm:  0 2px 5px rgba(10, 30, 15, 0.05), 0 1px 2px rgba(10, 30, 15, 0.03);
+  --shadow-md:  0 6px 16px rgba(10, 30, 15, 0.07), 0 2px 4px rgba(10, 30, 15, 0.04);
+  --shadow-lg:  0 12px 32px rgba(10, 30, 15, 0.10), 0 3px 8px rgba(10, 30, 15, 0.05);
+  --shadow-xl:  0 20px 48px rgba(10, 30, 15, 0.14), 0 6px 16px rgba(10, 30, 15, 0.08);
+
+  --shadow-green-glow: 0 8px 24px rgba(26, 138, 61, 0.28);
+  --shadow-gold-glow:  0 8px 24px rgba(245, 182, 25, 0.32);
+
+  /* === Spacing & Radius === */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* === Typography === */
+  --font-heading: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
+  --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --z-dropdown:  100;
+  --z-sticky:    200;
+  --z-overlay:   300;
+  --z-modal:     400;
+  --z-toast:     500;
+
+  --sidebar-width:          265px;
+  --sidebar-collapsed-width: 72px;
+  --navbar-height:          72px;
+}

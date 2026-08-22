@@ -1,0 +1,357 @@
+/* Dairy Operational Dashboard Styling */
+
+.farmer-dashboard-container {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  background: hsl(205, 25%, 96%);
+  min-height: 100vh;
+}
+
+.dairy-quality-ribbon {
+  background: linear-gradient(90deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1.5px solid #bae6fd;
+}
+
+/* Operational Header Banner */
+.farmer-op-banner {
+  background: linear-gradient(135deg,
+    hsl(205, 85%, 12%) 0%,
+    hsl(142, 65%, 22%) 60%,
+    hsl(142, 50%, 28%) 100%
+  );
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.farmer-op-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 90% 20%, rgba(245, 182, 25, 0.18) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.farmer-badge-tag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold-500);
+  margin-bottom: var(--space-2);
+}
+
+.farmer-op-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.farmer-op-subtitle {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 4px;
+}
+
+.farmer-op-banner-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  position: relative;
+  z-index: 1;
+}
+
+.op-status-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.op-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse 2s infinite;
+}
+
+/* Dashboard Layout Grid */
+.farmer-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.farmer-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.farmer-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Metrics Row */
+.farmer-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.farmer-metric-card {
+  background: var(--white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.farmer-metric-card.alert {
+  border-color: hsl(0, 75%, 85%);
+  background: linear-gradient(180deg, #ffffff 0%, hsl(0, 80%, 98%) 100%);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.metric-icon {
+  font-size: 26px;
+}
+
+.metric-trend {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.metric-trend.green { background: var(--green-100); color: var(--green-700); }
+.metric-trend.amber { background: var(--gold-100); color: var(--gold-700); }
+.metric-trend.red   { background: hsl(0, 80%, 94%); color: hsl(0, 75%, 40%); }
+
+.metric-value {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.metric-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.metric-footer {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+}
+
+.metric-link {
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(0, 75%, 44%);
+  margin-top: var(--space-2);
+  text-decoration: none;
+}
+.metric-link:hover { text-decoration: underline; }
+
+/* Section Card */
+.farmer-section-card {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Capacity Control Center */
+.capacity-control-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.capacity-item-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 200px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--cream);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.capacity-item-row:hover {
+  border-color: var(--green-300);
+}
+
+.capacity-item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.yield-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--white);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 3px 8px;
+}
+
+.stepper-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  border: 1px solid var(--border-light);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--green-100);
+  color: var(--green-700);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepper-val {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Table */
+.farmer-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.farmer-data-table th {
+  background: var(--cream-100);
+  padding: 12px var(--space-4);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.farmer-data-table td {
+  padding: 14px var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.farmer-data-table tr:hover td {
+  background: var(--cream);
+}
+
+/* Sidebar Console */
+.farmer-quick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--cream);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.farmer-quick-btn:hover {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+  transform: translateX(3px);
+}
+
+.farmer-quick-btn.highlight {
+  background: var(--gold-100);
+  border-color: var(--gold-300);
+  color: var(--earth-900);
+}
+
+.farmer-quick-btn.highlight:hover {
+  background: var(--gold-300);
+}
+
+.exchange-widget {
+  border-color: var(--gold-300);
+}
+
+.exchange-mini-item {
+  background: var(--cream);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .farmer-dashboard-grid { grid-template-columns: 1fr; }
+  .farmer-metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .capacity-item-row { grid-template-columns: 1fr; gap: var(--space-2); }
+}
+
+@media (max-width: 600px) {
+  .farmer-metrics-row { grid-template-columns: 1fr; }
+  .farmer-op-banner { flex-direction: column; align-items: flex-start; }
+  .farmer-op-banner-controls { align-items: flex-start; }
+}
