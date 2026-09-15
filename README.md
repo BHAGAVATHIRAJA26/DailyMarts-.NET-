@@ -57,20 +57,8 @@
 | Layer | Technology Used |
 |---|---|
 | **Frontend** | React 18, Vite, React Router v6, Axios, Recharts, QRCode.react, Lucide-style CSS |
-| **Backend** | ASP.NET Core 8.0 Web API, C#, Controllers & Dependency Injection |
-| **Database** | MongoDB Atlas, `MongoDB.Driver`, GeoJSON `2dsphere` Proximity Indexing |
-| **Authentication** | JSON Web Tokens (JWT Bearer), Password Hashing via `BCrypt.Net-Next` |
-| **Email Service** | Resend API SDK with responsive HTML templates |
-| **Background Jobs** | `CronBackgroundService` (`IHostedService`) for midnight delivery generation |
-| **Styling System** | Custom Vanilla CSS Design System with dark mode support & CSS variables |
-
----
-
-## 📁 Repository Structure
-
-```
-.
-├── backend-dotnet/                 # ASP.NET Core 8.0 Web API Server
+| **Backend** | ASP.NET Core 8.0 Web API, C#, Controllers & Dependency I.
+├── backend/                        # ASP.NET Core 8.0 Web API Server
 │   ├── Controllers/                # API Controllers (Auth, Products, Orders, Payments, etc.)
 │   ├── Data/                       # MongoDbContext & Database Indexing
 │   ├── DTOs/                       # Request & Response Data Transfer Objects
@@ -150,7 +138,28 @@ cd DailyMarts-.NET-
 ```
 
 ### 2. Configure ASP.NET Core Backend
-Navigate to `backend-dotnet/` and verify `appsettings.json`:
+Navigate to `backend/` and verify `appsettings.json`:d}` — Trigger payment reminder email & notification
+- `POST /api/notifications/send-email` — Send direct custom email from farmer to customer via Resend
+- `GET  /api/reports/farmer/stats` — Aggregated sales & financial statistics
+
+---
+
+## 🚀 Getting Started & Local Installation
+
+### Prerequisites
+- **.NET 8.0 SDK**: [Download .NET 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
+- **Node.js**: `v18.x` or higher
+- **MongoDB Atlas** account (or local MongoDB server)
+- **Resend API Key**: [resend.com](https://resend.com)
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/BHAGAVATHIRAJA26/DailyMarts-.NET-.git
+cd DailyMarts-.NET-
+```
+
+### 2. Configure ASP.NET Core Backend
+Navigate to `backend/` and verify `appsettings.json`:
 ```json
 {
   "MongoDbSettings": {
@@ -171,7 +180,7 @@ Navigate to `backend-dotnet/` and verify `appsettings.json`:
 
 ```bash
 # Terminal 1: ASP.NET Core 8.0 Web API Server (Port 5000)
-cd backend-dotnet
+cd backend
 dotnet run
 
 # Terminal 2: Frontend Client (Port 5173)
