@@ -70,7 +70,7 @@
 
 ```
 .
-├── backend/                        # ASP.NET Core 8.0 Web API Server
+├── backend-dotnet/                 # ASP.NET Core 8.0 Web API Server
 │   ├── Controllers/                # API Controllers (Auth, Products, Orders, Payments, etc.)
 │   ├── Data/                       # MongoDbContext & Database Indexing
 │   ├── DTOs/                       # Request & Response Data Transfer Objects
@@ -150,7 +150,7 @@ cd DailyMarts-.NET-
 ```
 
 ### 2. Configure ASP.NET Core Backend
-Navigate to `backend/` and verify `appsettings.json`:
+Navigate to `backend-dotnet/` and verify `appsettings.json`:
 ```json
 {
   "MongoDbSettings": {
@@ -171,7 +171,7 @@ Navigate to `backend/` and verify `appsettings.json`:
 
 ```bash
 # Terminal 1: ASP.NET Core 8.0 Web API Server (Port 5000)
-cd backend
+cd backend-dotnet
 dotnet run
 
 # Terminal 2: Frontend Client (Port 5173)

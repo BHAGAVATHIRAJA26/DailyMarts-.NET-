@@ -1,15 +1,13 @@
 {
-  "name": "dailymarts",
+  "name": "4",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "backend": "cd backend && dotnet run",
-    "build:backend": "cd backend && dotnet build"
+    "preview": "vite preview"
   },
   "dependencies": {
     "axios": "^1.19.0",
