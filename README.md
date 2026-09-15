@@ -3,13 +3,14 @@
 ![DailyMarts Banner](public/logo.svg)
 
 [![React](https://img.shields.io/badge/Frontend-React_v18-16a34a?style=for-the-badge&logo=react)](https://reactjs.org/)
-[![Node.js](https://img.shields.io/badge/Backend-Node.js_Express-14532d?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![NET 8.0](https://img.shields.io/badge/Backend-.NET_8.0_ASP.NET_Core-512BD4?style=for-the-badge&logo=.net)](https://dotnet.microsoft.com/)
+[![CSharp](https://img.shields.io/badge/Language-C%23-239120?style=for-the-badge&logo=csharp)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB_Atlas-47a248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/atlas)
 [![Resend](https://img.shields.io/badge/Email-Resend_API-000000?style=for-the-badge&logo=mail.ru)](https://resend.com)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue.style=for-the-badge)](#license)
 
-**DailyMarts** is a full MERN-stack daily agricultural and dairy product platform connecting local **Farmers** directly with **Customers**. The platform powers daily fresh milk deliveries, milk products, organic vegetables, chicken, and meat subscriptions with daily yield capacity management, direct UPI QR payments, peer-to-peer farmer product exchange, and automated email notifications.
+**DailyMarts** is a full-stack daily agricultural and dairy product platform powered by **ASP.NET Core 8.0 (C#) Web API** and **React 18** connecting local **Farmers** directly with **Customers**. The platform powers daily fresh milk deliveries, milk products, organic vegetables, chicken, and meat subscriptions with daily yield capacity management, direct UPI QR payments, peer-to-peer farmer product exchange, and automated email notifications.
 
 ---
 
@@ -43,23 +44,24 @@
                              REST API (JSON)
                                     │
                        ┌────────────▼────────────┐
-                       │  Node.js + Express.js   │  (MVC RESTful Backend API)
-                       │   JWT Auth & Bcryptjs   │
+                       │  ASP.NET Core 8.0 API   │  (RESTful C# Web API Architecture)
+                       │   JWT Auth & BCrypt     │
                        └─────┬──────────────┬────┘
                              │              │
         ┌────────────────────▼──┐        ┌──▼──────────────────┐
         │  MongoDB Atlas (Cloud)│        │   Resend Email API  │
-        │  Mongoose + 2dsphere  │        │ (Transactional Mail)│
+        │ MongoDB.Driver 2dsphere│       │ (Transactional Mail)│
         └───────────────────────┘        └─────────────────────┘
 ```
 
 | Layer | Technology Used |
 |---|---|
 | **Frontend** | React 18, Vite, React Router v6, Axios, Recharts, QRCode.react, Lucide-style CSS |
-| **Backend** | Node.js, Express.js (MVC Pattern), CommonJS |
-| **Database** | MongoDB Atlas, Mongoose ODM, GeoJSON `2dsphere` Indexing |
-| **Authentication** | JSON Web Tokens (JWT), Password Hashing via `bcryptjs` |
-| **Email Service** | Resend API SDK (`resend`) with responsive HTML templates |
+| **Backend** | ASP.NET Core 8.0 Web API, C#, Controllers & Dependency Injection |
+| **Database** | MongoDB Atlas, `MongoDB.Driver`, GeoJSON `2dsphere` Proximity Indexing |
+| **Authentication** | JSON Web Tokens (JWT Bearer), Password Hashing via `BCrypt.Net-Next` |
+| **Email Service** | Resend API SDK with responsive HTML templates |
+| **Background Jobs** | `CronBackgroundService` (`IHostedService`) for midnight delivery generation |
 | **Styling System** | Custom Vanilla CSS Design System with dark mode support & CSS variables |
 
 ---
@@ -68,16 +70,17 @@
 
 ```
 .
-├── backend/                        # Express.js REST API Server
-│   ├── src/
-│   │   ├── config/                 # Database (MongoDB) & Email (Resend) configs
-│   │   ├── controllers/            # Route controllers (Auth, Products, Payments, etc.)
-│   │   ├── middleware/             # Auth JWT protection & Error handlers
-│   │   ├── models/                 # Mongoose schemas (User, Product, Bill, Payment, etc.)
-│   │   ├── routes/                 # REST API Express endpoints
-│   │   └── services/               # Resend Email service & Cron jobs
-│   ├── .env                        # Server Environment variables
-│   └── server.js                   # Application Entry Point
+├── backend-dotnet/                 # ASP.NET Core 8.0 Web API Server
+│   ├── Controllers/                # API Controllers (Auth, Products, Orders, Payments, etc.)
+│   ├── Data/                       # MongoDbContext & Database Indexing
+│   ├── DTOs/                       # Request & Response Data Transfer Objects
+│   ├── Helpers/                    # ApiResponse envelope & IdGenerator
+│   ├── Middleware/                 # ExceptionHandlingMiddleware
+│   ├── Models/                     # MongoDB BSON Models (User, Product, Order, Bill, etc.)
+│   ├── Services/                   # JwtService, EmailService, CronBackgroundService, DatabaseSeeder
+│   ├── appsettings.json            # MongoDB, JWT & Resend configuration
+│   ├── DailyMarts.Api.csproj       # .NET 8.0 C# Project File
+│   └── Program.cs                  # Web Application Entry Point & Middleware Pipeline
 ├── public/                         # Static assets (Favicon, Logo SVGs)
 ├── src/                            # React Frontend Source Code
 │   ├── components/                 # Shared UI components (Navbar, Sidebar, Modal)
@@ -102,69 +105,81 @@
 - `POST /api/auth/register` — Register a new Customer or Farmer (collects `upiId` for farmers)
 - `POST /api/auth/login` — Authenticate user and issue JWT token
 - `GET  /api/auth/me` — Fetch currently logged-in user profile
+- `PUT  /api/auth/profile` — Update profile & farmer attributes
+
+### 🥛 Products (`/api/products`)
+- `GET  /api/products` — Search & filter available products
+- `GET  /api/products/{id}` — Get single product details
+- `POST /api/products` — Create new product (Farmer only)
+- `PUT  /api/products/{id}` — Update product details
+- `DELETE /api/products/{id}` — Delete product
+- `PATCH /api/products/{id}/capacity` — Update daily stock capacity
+
+### 📦 Orders & Subscriptions (`/api/orders`, `/api/subscriptions`)
+- `POST /api/orders` — Place one-time order
+- `GET  /api/orders` — Fetch user orders
+- `POST /api/subscriptions` — Create recurring milk subscription
+- `GET  /api/subscriptions` — List recurring subscriptions
 
 ### 💳 Payments & Billing (`/api/payments` & `/api/bills`)
-- `GET  /api/payments/farmer-upi/:farmerId` — Fetch farmer's registered UPI ID for QR generation
+- `GET  /api/payments/farmer-upi/{farmerId}` — Fetch farmer's registered UPI ID for QR generation
 - `POST /api/payments` — Record customer UPI transfer (creates `PENDING` request)
 - `GET  /api/payments/pending` — Fetch pending payments awaiting farmer approval
-- `PATCH /api/payments/:paymentId/confirm` — Farmer marks payment received → deducts bill balance
+- `PATCH /api/payments/{paymentId}/confirm` — Farmer marks payment received → deducts bill balance
 - `GET  /api/bills` — Fetch customer/farmer monthly billing ledger
 
-### 📧 Notifications (`/api/notifications`)
-- `POST /api/notifications/remind/:customerId` — Trigger payment reminder email & notification
+### 📧 Notifications & Reports (`/api/notifications`, `/api/reports`)
+- `POST /api/notifications/remind/{customerId}` — Trigger payment reminder email & notification
 - `POST /api/notifications/send-email` — Send direct custom email from farmer to customer via Resend
+- `GET  /api/reports/farmer/stats` — Aggregated sales & financial statistics
 
 ---
 
 ## 🚀 Getting Started & Local Installation
 
 ### Prerequisites
+- **.NET 8.0 SDK**: [Download .NET 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **Node.js**: `v18.x` or higher
-- **npm**: `v9.x` or higher
 - **MongoDB Atlas** account (or local MongoDB server)
 - **Resend API Key**: [resend.com](https://resend.com)
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/dailymarts.git
-cd dailymarts
+git clone https://github.com/BHAGAVATHIRAJA26/DailyMarts-.NET-.git
+cd DailyMarts-.NET-
 ```
 
-### 2. Configure Backend Environment
-Navigate to the `backend/` directory and create/verify the `.env` file:
-```env
-PORT=5000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/dailymarts?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key
-RESEND_API_KEY=re_your_resend_api_key
-RESEND_FROM=DailyMarts <onboarding@resend.dev>
-CLIENT_URL=http://localhost:5173
+### 2. Configure ASP.NET Core Backend
+Navigate to `backend-dotnet/` and verify `appsettings.json`:
+```json
+{
+  "MongoDbSettings": {
+    "ConnectionString": "mongodb+srv://<username>:<password>@cluster0.mongodb.net/dailymarts?retryWrites=true&w=majority",
+    "DatabaseName": "dailymarts"
+  },
+  "JwtSettings": {
+    "Secret": "dailymarts_super_secret_jwt_key_2026_dindigul_tamilnadu_secure_token_12345",
+    "ExpiryDays": 30
+  },
+  "ResendSettings": {
+    "ApiKey": "re_your_resend_api_key_here"
+  }
+}
 ```
 
-### 3. Install Dependencies
-```bash
-# Install root (Frontend) dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-cd ..
-```
-
-### 4. Run Development Servers
-Start both the backend server and frontend development client:
+### 3. Run Development Servers
 
 ```bash
-# Terminal 1: Backend Server (Port 5000)
-cd backend
-node server.js
+# Terminal 1: ASP.NET Core 8.0 Web API Server (Port 5000)
+cd backend-dotnet
+dotnet run
 
 # Terminal 2: Frontend Client (Port 5173)
+npm install
 npm run dev
 ```
 
-Open your browser and navigate to `http://localhost:5173`.
+Open your browser and navigate to `http://localhost:5173` (Frontend) or `http://localhost:5000/swagger` (Interactive API Documentation).
 
 ---
 
@@ -172,20 +187,9 @@ Open your browser and navigate to `http://localhost:5173`.
 
 | Role | Email | Password | Details |
 |---|---|---|---|
-| 🌾 **Farmer** | `anand.farmer@gmail.com` | `password123` | Farm: *Anand Organic Dairy*, UPI: `anand@oksbi` |
-| 🌾 **Farmer (Alt)** | `testfarmer@dailymarts.com` | `test123` | Farm: *Test Farm* |
-| 👤 **Customer** | `bhagavathiraja.s26@gmail.com` | `password123` | Name: *Priya Customer*, Location: *Dindigul* |
-| 👤 **Customer (Alt)** | `kavitha.customer@gmail.com` | `password123` | Name: *Kavitha Customer* |
-
----
-
-## 🤝 Contributing
-Contributions are welcome! Please follow these steps:
-1. Fork the Project Repository
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+| 🌾 **Farmer** | `farmer@dailymarts.com` | `farmer123` | Farm: *Velliangiri Organic Farm*, UPI: `muthusamy@upi` |
+| 🌾 **Farmer (Alt)** | `kannammal@dailymarts.com` | `farmer123` | Farm: *Sri Green Organic Dairy*, UPI: `kannammal@okaxis` |
+| 👤 **Customer** | `customer@dailymarts.com` | `customer123` | Name: *Anitha Ramesh*, Location: *Dindigul* |
 
 ---
 
@@ -194,6 +198,6 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-<p center="text-center">
-Made with ❤️ for local dairy farmers and healthy families.
+<p align="center">
+Made with ❤️ for local dairy farmers and healthy families powered by ASP.NET Core 8.0 & React.
 </p>
